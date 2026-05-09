@@ -11,12 +11,31 @@ type Creator = {
   wallet_address: string;
 };
 
+type TipRow = {
+  tipper_wallet: string;
+  amount_usdc: number;
+  tx_signature: string | null;
+  created_at: string;
+};
+
+type Stats = {
+  totalEarned: number;
+  tipCount: number;
+  uniqueSupporters: number;
+};
+
+type LeaderEntry = { wallet: string; total: number };
+
 export default function Dashboard() {
   const { connected, wallet } = useWalletConnection();
   const [creator, setCreator] = useState<Creator | null>(null);
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(false);
   const [handle, setHandle] = useState("");
+  const [stats, setStats] = useState<Stats>({ totalEarned: 0, tipCount: 0, uniqueSupporters: 0 });
+  const [recentTips, setRecentTips] = useState<TipRow[]>([]);
+  const [leaderboard, setLeaderboard] = useState<LeaderEntry[]>([]);
+  const [statsLoading, setStatsLoading] = useState(false);
 
   const walletAddress = wallet ? String(wallet.account.address) : null;
 
@@ -34,6 +53,42 @@ export default function Dashboard() {
         setChecking(false);
       });
   }, [walletAddress]);
+
+  // Load real stats once creator is known
+  useEffect(() => {
+    if (!creator) return;
+    setStatsLoading(true);
+
+    supabase
+      .from("tips_cache")
+      .select("tipper_wallet, amount_usdc, tx_signature, created_at")
+      .eq("creator_handle", creator.x_handle)
+      .order("created_at", { ascending: false })
+      .then(({ data }) => {
+        const rows: TipRow[] = data ?? [];
+
+        // Compute stats
+        const totalEarned = rows.reduce((s, r) => s + Number(r.amount_usdc), 0);
+        const tipCount = rows.length;
+        const uniqueSupporters = new Set(rows.map((r) => r.tipper_wallet)).size;
+        setStats({ totalEarned, tipCount, uniqueSupporters });
+
+        // Recent tips (last 10)
+        setRecentTips(rows.slice(0, 10));
+
+        // Top supporters leaderboard
+        const totals: Record<string, number> = {};
+        for (const r of rows) {
+          totals[r.tipper_wallet] = (totals[r.tipper_wallet] ?? 0) + Number(r.amount_usdc);
+        }
+        const sorted = Object.entries(totals)
+          .sort(([, a], [, b]) => b - a)
+          .slice(0, 5)
+          .map(([wallet, total]) => ({ wallet, total }));
+        setLeaderboard(sorted);
+        setStatsLoading(false);
+      });
+  }, [creator]);
 
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
@@ -69,8 +124,7 @@ export default function Dashboard() {
         <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center px-6">
           <h1 className="text-2xl font-bold">Connect your wallet</h1>
           <p className="text-zinc-400 text-sm max-w-sm">
-            Connect Phantom to access your creator dashboard, view earnings, and
-            manage your profile.
+            Connect Phantom to access your creator dashboard, view earnings, and manage your profile.
           </p>
         </div>
       </div>
@@ -122,9 +176,7 @@ export default function Dashboard() {
 
               <div className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3">
                 <p className="text-xs text-zinc-500 mb-0.5">Receiving wallet</p>
-                <p className="font-mono text-xs text-zinc-300 break-all">
-                  {walletAddress}
-                </p>
+                <p className="font-mono text-xs text-zinc-300 break-all">{walletAddress}</p>
               </div>
 
               <button
@@ -141,7 +193,7 @@ export default function Dashboard() {
     );
   }
 
-  // Registered — show dashboard
+  // Registered — show dashboard with real stats
   return (
     <div className="flex flex-col min-h-screen">
       <Nav />
@@ -164,9 +216,21 @@ export default function Dashboard() {
 
         {/* Stats row */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <StatCard label="Total Earned" value="$0.00" sub="USDC" />
-          <StatCard label="Total Tips" value="0" sub="transactions" />
-          <StatCard label="Supporters" value="0" sub="unique wallets" />
+          <StatCard
+            label="Total Earned"
+            value={statsLoading ? "…" : `$${stats.totalEarned.toFixed(2)}`}
+            sub="USDC"
+          />
+          <StatCard
+            label="Total Tips"
+            value={statsLoading ? "…" : String(stats.tipCount)}
+            sub="transactions"
+          />
+          <StatCard
+            label="Supporters"
+            value={statsLoading ? "…" : String(stats.uniqueSupporters)}
+            sub="unique wallets"
+          />
         </div>
 
         {/* Share link */}
@@ -195,34 +259,85 @@ export default function Dashboard() {
           <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-zinc-500">
             Recent Tips
           </h2>
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-8 text-center text-sm text-zinc-500">
-            No tips yet. Share your profile link to get started.
-          </div>
+          {statsLoading ? (
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-8 text-center text-sm text-zinc-500">
+              Loading...
+            </div>
+          ) : recentTips.length === 0 ? (
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-8 text-center text-sm text-zinc-500">
+              No tips yet. Share your profile link to get started.
+            </div>
+          ) : (
+            <div className="divide-y divide-zinc-800 rounded-2xl border border-zinc-800 bg-zinc-900">
+              {recentTips.map((tip, i) => (
+                <div key={i} className="flex items-center justify-between px-5 py-4 text-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-full bg-zinc-700 flex items-center justify-center text-xs font-bold text-zinc-400">
+                      {tip.tipper_wallet.slice(0, 2).toUpperCase()}
+                    </div>
+                    <span className="font-mono text-xs text-zinc-400">
+                      {tip.tipper_wallet.slice(0, 6)}…{tip.tipper_wallet.slice(-4)}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <span className="font-semibold text-green-400">
+                      +${Number(tip.amount_usdc).toFixed(2)}
+                    </span>
+                    {tip.tx_signature && (
+                      <a
+                        href={`https://solscan.io/tx/${tip.tx_signature}?cluster=devnet`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-zinc-600 hover:text-zinc-400 transition"
+                      >
+                        ↗ Solscan
+                      </a>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
 
-        {/* Top supporters */}
+        {/* Top supporters leaderboard */}
         <section>
           <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-zinc-500">
             Top Supporters
           </h2>
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-8 text-center text-sm text-zinc-500">
-            Your top supporters will appear here.
-          </div>
+          {statsLoading ? (
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-8 text-center text-sm text-zinc-500">
+              Loading...
+            </div>
+          ) : leaderboard.length === 0 ? (
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-8 text-center text-sm text-zinc-500">
+              Your top supporters will appear here.
+            </div>
+          ) : (
+            <div className="divide-y divide-zinc-800 rounded-2xl border border-zinc-800 bg-zinc-900">
+              {leaderboard.map((entry, index) => (
+                <div key={entry.wallet} className="flex items-center gap-4 px-5 py-4 text-sm">
+                  <span className="w-6 text-center font-bold text-zinc-600">{index + 1}</span>
+                  <div className="h-8 w-8 rounded-full bg-gradient-to-br from-purple-600 to-purple-400 flex items-center justify-center text-xs font-bold text-white">
+                    {index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : "⭐"}
+                  </div>
+                  <span className="font-mono text-xs text-zinc-400">
+                    {entry.wallet.slice(0, 6)}…{entry.wallet.slice(-4)}
+                  </span>
+                  <span className="ml-auto font-semibold text-green-400">
+                    ${entry.total.toFixed(2)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
       </main>
     </div>
   );
 }
 
-function StatCard({
-  label,
-  value,
-  sub,
-}: {
-  label: string;
-  value: string;
-  sub: string;
-}) {
+function StatCard({ label, value, sub }: { label: string; value: string; sub: string }) {
   return (
     <div className="rounded-2xl border border-zinc-800 bg-zinc-900 px-5 py-5">
       <p className="text-xs text-zinc-500 uppercase tracking-wider">{label}</p>
