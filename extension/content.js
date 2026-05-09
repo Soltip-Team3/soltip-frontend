@@ -1,6 +1,6 @@
 // ── Config ──────────────────────────────────────────────────────────────────
 // Change this to your Vercel URL before submitting (e.g. "https://soltip.vercel.app")
-const API_BASE = "http://localhost:3000";
+const API_BASE = "https://soltip-frontend.vercel.app";
 const PROCESSED_ATTR = "data-soltip";
 const USDC_DEVNET_MINT = "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU";
 
