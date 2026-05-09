@@ -73,12 +73,13 @@ export default function CreatorPage({
 
       const senderAddress = wallet ? String(wallet.account.address) : null;
       if (senderAddress) {
-        await supabase.from("tips_cache").insert({
+        const { error: dbErr } = await supabase.from("tips_cache").insert({
           creator_handle: handle,
           tipper_wallet: senderAddress,
           amount_usdc: amountUsdc,
           tx_signature: String(sig),
         });
+        if (dbErr) console.error("tips_cache insert failed:", dbErr);
       }
 
       // Mint badge asynchronously (non-blocking)
