@@ -2,8 +2,8 @@
 
 import { Nav } from "../../components/nav";
 import { TipModal } from "../../components/tip-modal";
-import { useWalletConnection, useSendTransaction } from "@solana/react-hooks";
-import { address, getProgramDerivedAddress, getUtf8Encoder, getAddressEncoder, getU64Encoder, AccountRole } from "@solana/kit";
+import { useWalletConnection, useSplToken } from "@solana/react-hooks";
+import { address } from "@solana/kit";
 import { use, useEffect, useState, useCallback } from "react";
 import { toast } from "sonner";
 import { supabase } from "../../lib/supabase";
@@ -19,7 +19,7 @@ export default function CreatorPage({
 }) {
   const { handle } = use(params);
   const { connected, wallet } = useWalletConnection();
-  const { send, isSending } = useSendTransaction();
+  const { send, isSending } = useSplToken(USDC_DEVNET_MINT);
   const [showTipModal, setShowTipModal] = useState(false);
   const [creatorWallet, setCreatorWallet] = useState<string | null>(null);
   const [creatorFound, setCreatorFound] = useState<boolean | null>(null); // null = loading
@@ -66,56 +66,9 @@ export default function CreatorPage({
   async function handleSendTip(amountUsdc: number) {
     if (!creatorWallet || !wallet) return;
     try {
-      const PROGRAM_ID = address("HGT4DoDJ1crx3HM28t1CJBT2KAAzK44y3esrNWCtP1JE");
-      const TOKEN_PROGRAM_ID = address("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
-      const ATA_PROGRAM_ID = address("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL");
-      const SYSTEM_PROGRAM_ID = address("11111111111111111111111111111111");
-      const tipperWallet = wallet.account.address;
-
-      const [creatorProfile] = await getProgramDerivedAddress({
-        programAddress: PROGRAM_ID,
-        seeds: [getUtf8Encoder().encode("creator"), getAddressEncoder().encode(address(creatorWallet))]
-      });
-
-      const [supporterStats] = await getProgramDerivedAddress({
-        programAddress: PROGRAM_ID,
-        seeds: [getUtf8Encoder().encode("supporter"), getAddressEncoder().encode(creatorProfile), getAddressEncoder().encode(tipperWallet)]
-      });
-
-      const [tipperUsdcAta] = await getProgramDerivedAddress({
-        programAddress: ATA_PROGRAM_ID,
-        seeds: [getAddressEncoder().encode(tipperWallet), getAddressEncoder().encode(TOKEN_PROGRAM_ID), getAddressEncoder().encode(address(USDC_DEVNET_MINT))]
-      });
-
-      const [creatorUsdcAta] = await getProgramDerivedAddress({
-        programAddress: ATA_PROGRAM_ID,
-        seeds: [getAddressEncoder().encode(address(creatorWallet)), getAddressEncoder().encode(TOKEN_PROGRAM_ID), getAddressEncoder().encode(address(USDC_DEVNET_MINT))]
-      });
-
-      const amountMicro = BigInt(Math.round(amountUsdc * 1_000_000));
-      const data = new Uint8Array([
-        0xe7, 0x58, 0x38, 0xf2, 0xf1, 0x06, 0x1f, 0x3b, // global:send_tip discriminator
-        ...getU64Encoder().encode(amountMicro)
-      ]);
-
-      const ix = {
-        programAddress: PROGRAM_ID,
-        data,
-        accounts: [
-          { address: creatorProfile, role: AccountRole.WRITABLE },
-          { address: address(creatorWallet), role: AccountRole.READONLY },
-          { address: supporterStats, role: AccountRole.WRITABLE },
-          { address: tipperUsdcAta, role: AccountRole.WRITABLE },
-          { address: creatorUsdcAta, role: AccountRole.WRITABLE },
-          { address: address(USDC_DEVNET_MINT), role: AccountRole.READONLY },
-          { address: tipperWallet, role: AccountRole.WRITABLE_SIGNER },
-          { address: TOKEN_PROGRAM_ID, role: AccountRole.READONLY },
-          { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
-        ]
-      };
-
       const sig = await send({
-        instructions: [ix]
+        amount: amountUsdc,
+        destinationOwner: address(creatorWallet),
       });
 
       const senderAddress = wallet ? String(wallet.account.address) : null;
