@@ -1,17 +1,16 @@
 "use client";
 
 import { useEffect, useState, use } from "react";
+import dynamic from "next/dynamic";
+import type { ChainType } from "@lifi/sdk";
 import { Nav } from "../../components/nav";
 import { supabase } from "../../lib/supabase";
 
-/**
- * Cross-chain tip page powered by Jumper Exchange (built on LI.FI).
- * No npm dependency required — uses the hosted widget via iframe.
- * Docs: https://docs.jumper.exchange/widget/iframe
- */
-
-// Jumper Exchange base URL
-const JUMPER_BASE = "https://jumper.exchange";
+// Dynamically import LiFiWidget with SSR disabled
+const LiFiWidget = dynamic(
+  () => import("@lifi/widget").then((module) => module.LiFiWidget),
+  { ssr: false, loading: () => <div className="animate-pulse flex h-[600px] items-center justify-center rounded-2xl bg-zinc-900 border border-zinc-800 text-zinc-500">Loading LI.FI Widget...</div> }
+);
 
 // USDC mint addresses
 const USDC_SOL_MAINNET = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
@@ -24,7 +23,6 @@ export default function CrossChainTipPage({
   const { handle } = use(params);
   const [creatorWallet, setCreatorWallet] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [iframeLoaded, setIframeLoaded] = useState(false);
 
   useEffect(() => {
     supabase
@@ -64,18 +62,24 @@ export default function CrossChainTipPage({
     );
   }
 
-  // Build Jumper Exchange URL:
-  // - toChain=SOL, toToken=USDC, toAddress=creator wallet
-  // - theme=dark
-  const params_url = new URLSearchParams({
-    toChain: "SOL",
+  // Configure the widget
+  const widgetConfig = {
+    integrator: "soltip",
+    theme: {
+      palette: {
+        mode: "dark" as const,
+        primary: { main: "#9333ea" }, // Purple 600
+        background: { default: "#18181b", paper: "#27272a" },
+      },
+      shape: { borderRadius: 16 },
+    },
+    toChain: 1151111081099710, // Solana chain ID in LI.FI
     toToken: USDC_SOL_MAINNET,
-    toAddress: creatorWallet,
-    theme: "dark",
-    variant: "compact",
-    expandInformation: "false",
-  });
-  const widgetUrl = `${JUMPER_BASE}/?${params_url.toString()}`;
+    toAddress: {
+      address: creatorWallet,
+      chainType: "SVM" as ChainType,
+    },
+  };
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -86,7 +90,7 @@ export default function CrossChainTipPage({
         <div className="text-center space-y-2">
           <div className="inline-flex items-center gap-2 rounded-full border border-purple-500/30 bg-purple-500/10 px-3 py-1 text-xs text-purple-300">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-purple-400" />
-            Cross-Chain via LI.FI / Jumper
+            Cross-Chain via LI.FI Widget
           </div>
           <h1 className="text-2xl font-bold">
             Tip{" "}
@@ -110,45 +114,15 @@ export default function CrossChainTipPage({
           <span className="text-xs text-green-400 font-semibold">✓ @{handle}</span>
         </div>
 
-        {/* Step pills */}
-        <div className="grid grid-cols-3 gap-3 text-center">
-          {[
-            { n: "1", label: "Choose source token & chain" },
-            { n: "2", label: "LI.FI bridges to Solana USDC" },
-            { n: "3", label: "Creator receives instantly" },
-          ].map(({ n, label }) => (
-            <div key={n} className="rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-3">
-              <div className="mx-auto mb-2 flex h-7 w-7 items-center justify-center rounded-full bg-purple-600 text-xs font-bold text-white">
-                {n}
-              </div>
-              <p className="text-xs text-zinc-400 leading-snug">{label}</p>
-            </div>
-          ))}
-        </div>
-
-        {/* Jumper Exchange iframe */}
-        <div className="relative overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900" style={{ minHeight: 600 }}>
-          {!iframeLoaded && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
-              <div className="h-8 w-8 animate-spin rounded-full border-2 border-purple-500/30 border-t-purple-500" />
-              <p className="text-xs text-zinc-500">Loading Jumper Exchange…</p>
-            </div>
-          )}
-          <iframe
-            src={widgetUrl}
-            width="100%"
-            height="600"
-            style={{ border: "none", display: iframeLoaded ? "block" : "none" }}
-            title="Jumper Exchange — Cross-Chain Tip"
-            onLoad={() => setIframeLoaded(true)}
-            allow="clipboard-write"
-          />
+        {/* Native @lifi/widget */}
+        <div className="rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900 shadow-2xl shadow-purple-900/10">
+          <LiFiWidget config={widgetConfig} integrator="soltip" />
         </div>
 
         {/* Footer note */}
         <div className="text-center space-y-1">
           <p className="text-xs text-zinc-600">
-            Powered by{" "}
+            Powered natively by{" "}
             <a
               href="https://li.fi"
               target="_blank"
@@ -156,15 +130,6 @@ export default function CrossChainTipPage({
               className="text-purple-400 hover:text-purple-300 transition"
             >
               LI.FI
-            </a>
-            {" "}via{" "}
-            <a
-              href="https://jumper.exchange"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-purple-400 hover:text-purple-300 transition"
-            >
-              Jumper Exchange
             </a>
           </p>
           <p className="text-xs text-zinc-700">
