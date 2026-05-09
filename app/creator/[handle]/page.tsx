@@ -71,6 +71,7 @@ export default function CreatorPage({
         destinationOwner: address(creatorWallet),
       });
 
+      console.log("✅ Tip tx signature:", String(sig));
       const senderAddress = wallet ? String(wallet.account.address) : null;
       if (senderAddress) {
         const { error: dbErr } = await supabase.from("tips_cache").insert({
