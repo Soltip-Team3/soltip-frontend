@@ -10,7 +10,7 @@ import { supabase } from "../../lib/supabase";
 
 const USDC_DEVNET_MINT = "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU";
 
-type LeaderEntry = { wallet: string; total: number };
+type LeaderEntry = { wallet: string; total: number; xHandle: string | null };
 
 export default function CreatorPage({
   params,
@@ -45,7 +45,18 @@ export default function CreatorPage({
     const sorted = Object.entries(totals)
       .sort(([, a], [, b]) => b - a)
       .slice(0, 10)
-      .map(([w, total]) => ({ wallet: w, total }));
+      .map(([w, total]) => ({ wallet: w, total, xHandle: null as string | null }));
+
+    if (sorted.length > 0) {
+      const { data: creators } = await supabase
+        .from("creators")
+        .select("wallet_address, x_handle")
+        .in("wallet_address", sorted.map((e) => e.wallet));
+      const handleMap = Object.fromEntries(
+        (creators ?? []).map((c) => [c.wallet_address, c.x_handle])
+      );
+      sorted.forEach((e) => { e.xHandle = handleMap[e.wallet] ?? null; });
+    }
     setLeaderboard(sorted);
   }, [handle]);
 
@@ -235,10 +246,10 @@ export default function CreatorPage({
                     {index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : index + 1}
                   </span>
                   <div className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-700 text-xs font-bold text-zinc-300">
-                    {entry.wallet.slice(0, 2).toUpperCase()}
+                    {entry.xHandle ? entry.xHandle.charAt(0).toUpperCase() : entry.wallet.slice(0, 2).toUpperCase()}
                   </div>
-                  <span className="font-mono text-xs text-zinc-400">
-                    {entry.wallet.slice(0, 6)}…{entry.wallet.slice(-4)}
+                  <span className="text-xs text-zinc-300">
+                    {entry.xHandle ? `@${entry.xHandle}` : `${entry.wallet.slice(0, 6)}…${entry.wallet.slice(-4)}`}
                   </span>
                   <span className="ml-auto font-semibold text-green-400">
                     ${entry.total.toFixed(2)}

@@ -24,7 +24,7 @@ type Stats = {
   uniqueSupporters: number;
 };
 
-type LeaderEntry = { wallet: string; total: number };
+type LeaderEntry = { wallet: string; total: number; xHandle: string | null };
 
 export default function Dashboard() {
   const { connected, wallet } = useWalletConnection();
@@ -84,7 +84,18 @@ export default function Dashboard() {
         const sorted = Object.entries(totals)
           .sort(([, a], [, b]) => b - a)
           .slice(0, 5)
-          .map(([wallet, total]) => ({ wallet, total }));
+          .map(([wallet, total]) => ({ wallet, total, xHandle: null as string | null }));
+
+        if (sorted.length > 0) {
+          const { data: creatorRows } = await supabase
+            .from("creators")
+            .select("wallet_address, x_handle")
+            .in("wallet_address", sorted.map((e) => e.wallet));
+          const handleMap = Object.fromEntries(
+            (creatorRows ?? []).map((c) => [c.wallet_address, c.x_handle])
+          );
+          sorted.forEach((e) => { e.xHandle = handleMap[e.wallet] ?? null; });
+        }
         setLeaderboard(sorted);
         setStatsLoading(false);
       });
@@ -321,8 +332,8 @@ export default function Dashboard() {
                   <div className="h-8 w-8 rounded-full bg-gradient-to-br from-purple-600 to-purple-400 flex items-center justify-center text-xs font-bold text-white">
                     {index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : "⭐"}
                   </div>
-                  <span className="font-mono text-xs text-zinc-400">
-                    {entry.wallet.slice(0, 6)}…{entry.wallet.slice(-4)}
+                  <span className="text-xs text-zinc-300">
+                    {entry.xHandle ? `@${entry.xHandle}` : `${entry.wallet.slice(0, 6)}…${entry.wallet.slice(-4)}`}
                   </span>
                   <span className="ml-auto font-semibold text-green-400">
                     ${entry.total.toFixed(2)}
