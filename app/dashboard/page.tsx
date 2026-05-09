@@ -13,10 +13,10 @@ type LeaderEntry = { wallet: string; total: number; xHandle: string | null };
 
 const PAGE_BG: React.CSSProperties = {
   background:
-    "radial-gradient(ellipse 100% 55% at 50% 0%, rgba(167,139,250,0.28) 0%, transparent 65%)," +
-    "radial-gradient(ellipse 70% 40% at 0% 100%, rgba(124,58,237,0.18) 0%, transparent 55%)," +
-    "radial-gradient(ellipse 50% 30% at 100% 50%, rgba(139,92,246,0.12) 0%, transparent 50%)," +
-    "#1a1035",
+    "radial-gradient(ellipse 130% 65% at 50% -5%, rgba(167,139,250,0.50) 0%, rgba(139,92,246,0.22) 45%, transparent 68%)," +
+    "radial-gradient(ellipse 80% 50% at -5% 100%, rgba(124,58,237,0.28) 0%, transparent 60%)," +
+    "radial-gradient(ellipse 60% 40% at 105% 50%, rgba(139,92,246,0.18) 0%, transparent 55%)," +
+    "#1e1b4b",
 };
 
 function XAvatar({ handle, size = 14 }: { handle: string; size?: number }) {
@@ -224,7 +224,7 @@ export default function Dashboard() {
         {/* Tip link */}
         <div
           className="rounded-2xl border border-purple-500/25 px-5 py-4"
-          style={{ background: "rgba(167,139,250,0.12)", backdropFilter: "blur(16px)" }}
+          style={{ background: "rgba(167,139,250,0.16)", backdropFilter: "blur(16px)" }}
         >
           <div className="flex items-center justify-between gap-4">
             <div className="min-w-0">
@@ -248,7 +248,7 @@ export default function Dashboard() {
             <h2 className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-zinc-500">
               <span className="text-purple-400">⚡</span> Recent Tips
             </h2>
-            <div className="rounded-2xl border border-zinc-800/80 overflow-hidden" style={{ background: "rgba(255,255,255,0.06)", backdropFilter: "blur(16px)" }}>
+            <div className="rounded-2xl border border-zinc-800/80 overflow-hidden" style={{ background: "rgba(255,255,255,0.08)", backdropFilter: "blur(16px)" }}>
               {statsLoading ? (
                 <div className="p-8 text-center text-sm text-zinc-600">Loading...</div>
               ) : recentTips.length === 0 ? (
@@ -290,7 +290,7 @@ export default function Dashboard() {
             <h2 className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-zinc-500">
               <span className="text-yellow-400">🏆</span> Top Supporters
             </h2>
-            <div className="rounded-2xl border border-zinc-800/80 overflow-hidden" style={{ background: "rgba(255,255,255,0.06)", backdropFilter: "blur(16px)" }}>
+            <div className="rounded-2xl border border-zinc-800/80 overflow-hidden" style={{ background: "rgba(255,255,255,0.08)", backdropFilter: "blur(16px)" }}>
               {statsLoading ? (
                 <div className="p-8 text-center text-sm text-zinc-600">Loading...</div>
               ) : leaderboard.length === 0 ? (
@@ -332,7 +332,7 @@ function StatCard({ icon, label, value, sub, accent }: {
   icon: string; label: string; value: string; sub: string; accent: "green" | "purple" | "violet";
 }) {
   const border = { green: "border-green-500/20", purple: "border-purple-500/20", violet: "border-violet-500/20" };
-  const bg = { green: "rgba(255,255,255,0.07)", purple: "rgba(255,255,255,0.07)", violet: "rgba(255,255,255,0.07)" };
+  const bg = { green: "rgba(255,255,255,0.09)", purple: "rgba(255,255,255,0.09)", violet: "rgba(255,255,255,0.09)" };
   const val = { green: "text-green-400", purple: "text-purple-400", violet: "text-violet-400" };
   return (
     <div className={`rounded-2xl border ${border[accent]} px-5 py-5`} style={{ background: bg[accent], backdropFilter: "blur(8px)" }}>
