@@ -238,8 +238,8 @@ export default function CreatorPage({
           </div>
           <div className="ml-auto flex gap-4 sm:gap-6 text-center">
             <div>
-              <p className="text-lg font-black text-green-400">◎ {totalReceived.toFixed(2)}</p>
-              <p className="text-xs text-zinc-500">SOL earned</p>
+              <p className="text-lg font-black text-green-400">$ {totalReceived.toFixed(2)}</p>
+              <p className="text-xs text-zinc-500">USDC earned</p>
             </div>
             <div>
               <p className="text-lg font-black">{tipCount}</p>
