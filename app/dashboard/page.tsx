@@ -169,7 +169,16 @@ export default function Dashboard() {
         ]
       };
 
-      await send({ instructions: [ix] });
+      try {
+        await send({ instructions: [ix] });
+      } catch (txErr) {
+        // If the account already exists on-chain, we can ignore this error and proceed to Supabase
+        const errMsg = txErr instanceof Error ? txErr.message : String(txErr);
+        if (!errMsg.includes("already in use") && !errMsg.includes("0x0")) {
+          throw txErr;
+        }
+        console.log("Creator profile already exists on-chain, continuing to database sync.");
+      }
 
       const { error } = await supabase.from("creators").insert({ x_handle: cleanHandle, wallet_address: walletAddress });
       if (error) {
