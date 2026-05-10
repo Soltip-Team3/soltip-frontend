@@ -348,7 +348,7 @@ export default function Dashboard() {
                         </div>
                         <div>
                           <p className="text-xs font-mono text-zinc-300">{tip.tipper_wallet.slice(0, 6)}…{tip.tipper_wallet.slice(-4)}</p>
-                          <p className="text-xs text-zinc-600 mt-0.5">
+                          <p className="text-xs text-zinc-400 mt-0.5">
                             {new Date(tip.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
                           </p>
                         </div>
@@ -385,7 +385,7 @@ export default function Dashboard() {
                   {leaderboard.map((entry, index) => (
                     <div key={entry.wallet} className="flex items-center gap-3 px-4 py-3 hover:bg-white/[0.02] transition">
                       <span className="w-5 text-center text-sm shrink-0">
-                        {index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : <span className="text-xs font-bold text-zinc-600">{index + 1}</span>}
+                        {index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : <span className="text-xs font-bold text-zinc-400">{index + 1}</span>}
                       </span>
                       {entry.xHandle ? (
                         <XAvatar handle={entry.xHandle} size={8} />
@@ -423,7 +423,7 @@ function StatCard({ icon, label, value, sub, accent }: {
         <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest">{label}</p>
       </div>
       <p className={`text-3xl font-black tabular-nums ${val[accent]}`}>{value}</p>
-      <p className="mt-1 text-xs text-zinc-600">{sub}</p>
+      <p className="mt-1 text-xs text-zinc-400">{sub}</p>
     </div>
   );
 }
