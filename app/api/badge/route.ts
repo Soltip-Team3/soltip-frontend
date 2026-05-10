@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 import { supabase } from "../../lib/supabase";
+import { createUmi } from "@metaplex-foundation/umi-bundle-defaults";
+import { mplBubblegum, mintV1 } from "@metaplex-foundation/mpl-bubblegum";
+import { keypairIdentity, publicKey, createSignerFromKeypair } from "@metaplex-foundation/umi";
 
 export async function POST(request: Request) {
   try {
@@ -51,7 +54,6 @@ export async function POST(request: Request) {
       5: "Diamond",
     };
 
-    // Badge metadata (cNFT mint would happen here via Bubblegum on a funded devnet)
     const badgeMetadata = {
       name: `SolTip ${badgeNames[level]} Badge`,
       symbol: "STIP",
@@ -64,8 +66,38 @@ export async function POST(request: Request) {
       ],
     };
 
+    // --- cNFT Minting via Bubblegum ---
+    const PAYER_PRIVATE_KEY = process.env.NEXT_PUBLIC_PAYER_PRIVATE_KEY || process.env.PAYER_PRIVATE_KEY;
+    const TREE_ADDRESS = process.env.NEXT_PUBLIC_TREE_ADDRESS || process.env.TREE_ADDRESS;
+
+    if (PAYER_PRIVATE_KEY && TREE_ADDRESS) {
+      try {
+        const umi = createUmi("https://api.devnet.solana.com").use(mplBubblegum());
+        const secretKey = new Uint8Array(JSON.parse(PAYER_PRIVATE_KEY));
+        const keypair = umi.eddsa.createKeypairFromSecretKey(secretKey);
+        const signer = createSignerFromKeypair(umi, keypair);
+        umi.use(keypairIdentity(signer));
+
+        await mintV1(umi, {
+          leafOwner: publicKey(tipper_wallet),
+          merkleTree: publicKey(TREE_ADDRESS),
+          metadata: {
+            name: badgeMetadata.name,
+            uri: badgeMetadata.image, // For a hackathon, we can use the image URL as the metadata URI
+            sellerFeeBasisPoints: 0,
+            collection: { key: publicKey(TREE_ADDRESS), verified: false },
+            creators: [{ address: signer.publicKey, verified: true, share: 100 }],
+          },
+        }).sendAndConfirm(umi);
+        console.log(`Successfully minted cNFT Level ${level} to ${tipper_wallet}`);
+      } catch (mintErr) {
+        console.error("Failed to mint cNFT:", mintErr);
+      }
+    }
+
     return NextResponse.json({ level, badge: badgeMetadata, total_tipped: totalUsdc });
-  } catch {
+  } catch (err) {
+    console.error("Badge route error:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

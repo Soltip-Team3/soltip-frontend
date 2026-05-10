@@ -11,6 +11,10 @@
   "dependencies": {
     "@bigmi/react": "^0.8.0",
     "@lifi/widget": "^3.40.12",
+    "@metaplex-foundation/mpl-bubblegum": "^5.0.2",
+    "@metaplex-foundation/umi": "^1.5.1",
+    "@metaplex-foundation/umi-bundle-defaults": "^1.5.1",
+    "@metaplex-foundation/umi-signer-wallet-adapters": "^1.5.1",
     "@mysten/dapp-kit": "^1.0.6",
     "@mysten/sui": "^2.16.2",
     "@solana/kit": "^6.9.0",

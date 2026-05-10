@@ -1,6 +1,7 @@
 "use client";
 
-import { useWalletConnection } from "@solana/react-hooks";
+import { useWalletConnection, useSendTransaction } from "@solana/react-hooks";
+import { address, getProgramDerivedAddress, getUtf8Encoder, getAddressEncoder, AccountRole } from "@solana/kit";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Nav } from "../components/nav";
@@ -42,6 +43,7 @@ function XAvatar({ handle, size = 14 }: { handle: string; size?: number }) {
 
 export default function Dashboard() {
   const { connected, wallet } = useWalletConnection();
+  const { send } = useSendTransaction();
   const [creator, setCreator] = useState<Creator | null>(null);
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(false);
@@ -137,14 +139,51 @@ export default function Dashboard() {
     if (!walletAddress || !handle.trim()) return;
     const cleanHandle = handle.trim().replace(/^@/, "");
     setLoading(true);
-    const { error } = await supabase.from("creators").insert({ x_handle: cleanHandle, wallet_address: walletAddress });
-    setLoading(false);
-    if (error) {
-      toast.error(error.code === "23505" ? "That X handle is already registered." : "Registration failed. Try again.");
-      return;
+
+    try {
+      const PROGRAM_ID = address("HGT4DoDJ1crx3HM28t1CJBT2KAAzK44y3esrNWCtP1JE");
+      const SYSTEM_PROGRAM_ID = address("11111111111111111111111111111111");
+
+      const [creatorProfile] = await getProgramDerivedAddress({
+        programAddress: PROGRAM_ID,
+        seeds: [getUtf8Encoder().encode("creator"), getAddressEncoder().encode(address(walletAddress))]
+      });
+
+      const handleBytes = getUtf8Encoder().encode(cleanHandle);
+      const handleLenBytes = new Uint8Array(4);
+      new DataView(handleLenBytes.buffer).setUint32(0, handleBytes.length, true); // little endian length prefix
+
+      const data = new Uint8Array([
+        0x55, 0x03, 0xc2, 0xd2, 0xa4, 0x8c, 0xa0, 0xc3, // global:handle_register_creator
+        ...handleLenBytes,
+        ...handleBytes
+      ]);
+
+      const ix = {
+        programAddress: PROGRAM_ID,
+        data,
+        accounts: [
+          { address: creatorProfile, role: AccountRole.WRITABLE },
+          { address: address(walletAddress), role: AccountRole.WRITABLE_SIGNER },
+          { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
+        ]
+      };
+
+      await send({ instructions: [ix] });
+
+      const { error } = await supabase.from("creators").insert({ x_handle: cleanHandle, wallet_address: walletAddress });
+      if (error) {
+        toast.error(error.code === "23505" ? "That X handle is already registered." : "Database error. Try again.");
+      } else {
+        toast.success(`@${cleanHandle} registered! Share your profile link.`);
+        setCreator({ x_handle: cleanHandle, wallet_address: walletAddress });
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error(err instanceof Error ? err.message : "Blockchain registration failed.");
+    } finally {
+      setLoading(false);
     }
-    toast.success(`@${cleanHandle} registered! Share your profile link.`);
-    setCreator({ x_handle: cleanHandle, wallet_address: walletAddress });
   }
 
   if (!connected) {
