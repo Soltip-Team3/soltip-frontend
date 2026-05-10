@@ -2,13 +2,13 @@
 
 import { Nav } from "../../components/nav";
 import { TipModal } from "../../components/tip-modal";
-import { useWalletConnection, useSendTransaction } from "@solana/react-hooks";
-import { address, getProgramDerivedAddress, getUtf8Encoder, getAddressEncoder, getU64Encoder, AccountRole } from "@solana/kit";
+import { useWalletConnection, useSplToken } from "@solana/react-hooks";
+import { address } from "@solana/kit";
 import { use, useEffect, useState, useCallback } from "react";
 import { toast } from "sonner";
 import { supabase } from "../../lib/supabase";
 
-// USDC_DEVNET_MINT is no longer needed for native SOL tipping
+const USDC_DEVNET_MINT = "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU";
 
 type LeaderEntry = { wallet: string; total: number; xHandle: string | null };
 type PremiumStatus = "idle" | "checking" | "locked" | "unlocked";
@@ -28,7 +28,7 @@ export default function CreatorPage({
 }) {
   const { handle } = use(params);
   const { connected, wallet } = useWalletConnection();
-  const { send, isSending } = useSendTransaction();
+  const { send, isSending } = useSplToken(USDC_DEVNET_MINT);
   const [showTipModal, setShowTipModal] = useState(false);
   const [creatorWallet, setCreatorWallet] = useState<string | null>(null);
   const [creatorFound, setCreatorFound] = useState<boolean | null>(null);
@@ -95,56 +95,12 @@ export default function CreatorPage({
     loadLeaderboard();
   }, [handle, loadLeaderboard]);
 
-  async function handleSendTip(amountSol: number) {
+  async function handleSendTip(amountUsdc: number) {
     if (!creatorWallet || !wallet) return;
     try {
-      const PROGRAM_ID = address("HGT4DoDJ1crx3HM28t1CJBT2KAAzK44y3esrNWCtP1JE");
-      const SYSTEM_PROGRAM_ID = address("11111111111111111111111111111111");
-      const tipperWallet = wallet.account.address;
-
-      const [creatorProfile] = await getProgramDerivedAddress({
-        programAddress: PROGRAM_ID,
-        seeds: [getUtf8Encoder().encode("creator"), getAddressEncoder().encode(address(creatorWallet))]
-      });
-
-      const [supporterStats] = await getProgramDerivedAddress({
-        programAddress: PROGRAM_ID,
-        seeds: [
-          getUtf8Encoder().encode("supporter_sol"),
-          getAddressEncoder().encode(creatorProfile),
-          getAddressEncoder().encode(tipperWallet)
-        ]
-      });
-
-      const [creatorSolTotals] = await getProgramDerivedAddress({
-        programAddress: PROGRAM_ID,
-        seeds: [
-          getUtf8Encoder().encode("creator_sol"),
-          getAddressEncoder().encode(creatorProfile)
-        ]
-      });
-
-      const amountLamports = BigInt(Math.round(amountSol * 1_000_000_000));
-      const data = new Uint8Array([
-        0x98, 0xe8, 0x1c, 0x06, 0xe1, 0xff, 0x9b, 0x28, // global:send_tip_sol discriminator
-        ...getU64Encoder().encode(amountLamports)
-      ]);
-
-      const ix = {
-        programAddress: PROGRAM_ID,
-        data,
-        accounts: [
-          { address: creatorProfile, role: AccountRole.WRITABLE },
-          { address: address(creatorWallet), role: AccountRole.WRITABLE },
-          { address: supporterStats, role: AccountRole.WRITABLE },
-          { address: creatorSolTotals, role: AccountRole.WRITABLE },
-          { address: tipperWallet, role: AccountRole.WRITABLE_SIGNER },
-          { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
-        ]
-      };
-
       const sig = await send({
-        instructions: [ix]
+        amount: amountUsdc,
+        destinationOwner: address(creatorWallet),
       });
 
       const senderAddress = walletAddress;
@@ -152,7 +108,7 @@ export default function CreatorPage({
         const { error: dbErr } = await supabase.from("tips_cache").insert({
           creator_handle: handle,
           tipper_wallet: senderAddress,
-          amount_usdc: amountSol, // Keep the column name amount_usdc in DB for now, but store SOL
+          amount_usdc: amountUsdc,
           tx_signature: String(sig),
         });
         if (dbErr) console.error("tips_cache insert failed:", dbErr);
@@ -170,14 +126,14 @@ export default function CreatorPage({
           .then((r) => r.json())
           .then((b: { level?: number; total_tipped?: number }) => {
             if (b.level) {
-              const { emoji, label } = badgeInfo(b.total_tipped ?? amountSol);
+              const { emoji, label } = badgeInfo(b.total_tipped ?? amountUsdc);
               toast.success(`${emoji} ${label} badge — Level ${b.level} Supporter!`, { duration: 5000 });
             }
           })
           .catch(() => {/* badge is best-effort */});
       }
 
-      toast.success(`${amountSol} SOL sent to @${handle}!`);
+      toast.success(`$${amountUsdc} USDC sent to @${handle}!`);
       setShowTipModal(false);
       setPremiumStatus("idle"); // re-check after tip
       await loadLeaderboard();

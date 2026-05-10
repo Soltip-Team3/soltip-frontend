@@ -5,11 +5,11 @@ import { useState } from "react";
 interface TipModalProps {
   creatorHandle: string;
   onClose: () => void;
-  onSendTip: (amountSol: number) => Promise<void>;
+  onSendTip: (amountUsdc: number) => Promise<void>;
   isSending: boolean;
 }
 
-const PRESET_AMOUNTS = [0.05, 0.1, 0.5];
+const PRESET_AMOUNTS = [1, 5, 20];
 
 export function TipModal({
   creatorHandle,
@@ -17,10 +17,10 @@ export function TipModal({
   onSendTip,
   isSending,
 }: TipModalProps) {
-  const [selectedAmount, setSelectedAmount] = useState<number | "custom">(0.1);
-  const [customAmount, setCustomAmount] = useState("0.2");
+  const [selectedAmount, setSelectedAmount] = useState<number | "custom">(5);
+  const [customAmount, setCustomAmount] = useState("10");
 
-  const amountSol =
+  const amountUsdc =
     selectedAmount === "custom" ? Number(customAmount) : selectedAmount;
 
   return (
@@ -39,7 +39,7 @@ export function TipModal({
             onClick={onClose}
             className="text-zinc-400 transition hover:text-white"
           >
-            X
+            ✕
           </button>
         </div>
 
@@ -55,7 +55,7 @@ export function TipModal({
                   : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
               }`}
             >
-              ◎ {amount}
+              ${amount} USDC
             </button>
           ))}
           <button
@@ -79,7 +79,7 @@ export function TipModal({
               step="0.01"
               value={customAmount}
               onChange={(event) => setCustomAmount(event.target.value)}
-              placeholder="Enter amount in SOL"
+              placeholder="Enter amount in USDC"
               className="w-full rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-3 text-sm text-white placeholder-zinc-500 outline-none focus:border-purple-500"
             />
           </div>
@@ -87,18 +87,18 @@ export function TipModal({
 
         <button
           type="button"
-          onClick={() => onSendTip(amountSol)}
-          disabled={isSending || !Number.isFinite(amountSol) || amountSol <= 0}
+          onClick={() => onSendTip(amountUsdc)}
+          disabled={isSending || !Number.isFinite(amountUsdc) || amountUsdc <= 0}
           className="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-purple-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-purple-500 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isSending && (
             <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
           )}
-          {isSending ? "Sending..." : "Send Tip"}
+          {isSending ? "Sending..." : `Send $${amountUsdc} USDC`}
         </button>
 
         <p className="mt-3 text-center text-xs text-zinc-500">
-          Paid in native SOL on Solana
+          Paid in USDC on Solana · instant &amp; no platform fees
         </p>
       </div>
     </div>
