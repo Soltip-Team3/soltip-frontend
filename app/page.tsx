@@ -6,7 +6,7 @@ export default function Home() {
     <div className="flex flex-col min-h-screen">
       <Nav />
 
-      <main className="flex flex-1 flex-col items-center justify-center px-6 text-center">
+      <main className="flex flex-1 flex-col items-center justify-center px-4 sm:px-6 text-center">
         {/* Hero */}
         <div className="max-w-2xl space-y-6">
           <div className="inline-flex items-center gap-2 rounded-full border border-purple-500/30 bg-purple-500/10 px-3 py-1 text-xs text-purple-300">
@@ -14,7 +14,7 @@ export default function Home() {
             Live on Solana Devnet
           </div>
 
-          <h1 className="text-5xl font-black tracking-tight md:text-6xl">
+          <h1 className="text-3xl sm:text-5xl font-black tracking-tight md:text-6xl">
             Tip creators on{" "}
             <span className="text-purple-400">X</span>
             {" "}with{" "}

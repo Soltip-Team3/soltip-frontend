@@ -85,7 +85,7 @@ export default function CrossChainTipPage({
     <div className="flex flex-col min-h-screen">
       <Nav />
 
-      <main className="mx-auto w-full max-w-2xl px-6 py-10 space-y-6">
+      <main className="mx-auto w-full max-w-2xl px-4 sm:px-6 py-10 space-y-6 overflow-hidden">
         {/* Header */}
         <div className="text-center space-y-2">
           <div className="inline-flex items-center gap-2 rounded-full border border-purple-500/30 bg-purple-500/10 px-3 py-1 text-xs text-purple-300">
@@ -97,25 +97,25 @@ export default function CrossChainTipPage({
             <span className="text-purple-400">@{handle}</span>
             {" "}from any chain
           </h1>
-          <p className="text-sm text-zinc-400 max-w-md mx-auto">
+          <p className="text-sm text-zinc-400 max-w-xs sm:max-w-md mx-auto text-center">
             Pay with ETH, USDC, or any token on Ethereum, Base, Arbitrum, Polygon…
             LI.FI bridges it to Solana USDC automatically.
           </p>
         </div>
 
         {/* Creator wallet display */}
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 flex items-center justify-between">
-          <div>
+        <div className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 flex items-center justify-between gap-3 overflow-hidden">
+          <div className="min-w-0">
             <p className="text-xs text-zinc-500">Tip destination (Solana)</p>
-            <p className="font-mono text-xs text-zinc-300 mt-0.5">
+            <p className="font-mono text-xs text-zinc-300 mt-0.5 break-all">
               {creatorWallet.slice(0, 12)}…{creatorWallet.slice(-8)}
             </p>
           </div>
-          <span className="text-xs text-green-400 font-semibold">✓ @{handle}</span>
+          <span className="text-xs text-green-400 font-semibold shrink-0">✓ @{handle}</span>
         </div>
 
         {/* Native @lifi/widget */}
-        <div className="rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900 shadow-2xl shadow-purple-900/10">
+        <div className="w-full rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900 shadow-2xl shadow-purple-900/10">
           <LiFiWidget config={widgetConfig} integrator="soltip" />
         </div>
 

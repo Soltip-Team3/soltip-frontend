@@ -10,6 +10,7 @@ type Creator = { x_handle: string; wallet_address: string };
 type TipRow = { tipper_wallet: string; amount_usdc: number; tx_signature: string | null; created_at: string };
 type Stats = { totalEarned: number; tipCount: number; uniqueSupporters: number };
 type LeaderEntry = { wallet: string; total: number; xHandle: string | null };
+type PremiumSettings = { premium_content_uri: string; premium_threshold: number };
 
 const PAGE_BG: React.CSSProperties = {
   background:
@@ -49,6 +50,8 @@ export default function Dashboard() {
   const [recentTips, setRecentTips] = useState<TipRow[]>([]);
   const [leaderboard, setLeaderboard] = useState<LeaderEntry[]>([]);
   const [statsLoading, setStatsLoading] = useState(false);
+  const [premium, setPremium] = useState<PremiumSettings>({ premium_content_uri: "", premium_threshold: 5 });
+  const [premiumLoading, setPremiumLoading] = useState(false);
 
   const walletAddress = wallet ? String(wallet.account.address) : null;
 
@@ -57,10 +60,20 @@ export default function Dashboard() {
     setChecking(true);
     supabase
       .from("creators")
-      .select("x_handle, wallet_address")
+      .select("x_handle, wallet_address, premium_content_uri, premium_threshold")
       .eq("wallet_address", walletAddress)
       .single()
-      .then(({ data }) => { setCreator(data ?? null); setChecking(false); });
+      .then(({ data }) => {
+        setCreator(data ? { x_handle: data.x_handle, wallet_address: data.wallet_address } : null);
+        if (data) {
+          const row = data as { premium_content_uri?: string; premium_threshold?: number } & typeof data;
+          setPremium({
+            premium_content_uri: row.premium_content_uri ?? "",
+            premium_threshold: row.premium_threshold ?? 5,
+          });
+        }
+        setChecking(false);
+      });
   }, [walletAddress]);
 
   useEffect(() => {
@@ -99,6 +112,25 @@ export default function Dashboard() {
     }
     loadStats();
   }, [creator]);
+
+  async function handleSavePremium(e: React.FormEvent) {
+    e.preventDefault();
+    if (!walletAddress) return;
+    setPremiumLoading(true);
+    const { error } = await supabase
+      .from("creators")
+      .update({
+        premium_content_uri: premium.premium_content_uri.trim() || null,
+        premium_threshold: premium.premium_threshold,
+      })
+      .eq("wallet_address", walletAddress);
+    setPremiumLoading(false);
+    if (error) {
+      toast.error("Failed to save premium settings.");
+    } else {
+      toast.success("Premium content settings saved!");
+    }
+  }
 
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
@@ -241,6 +273,56 @@ export default function Dashboard() {
             </button>
           </div>
         </div>
+
+        {/* Premium Content Settings */}
+        <form
+          onSubmit={handleSavePremium}
+          className="rounded-2xl border border-amber-500/25 px-5 py-5 space-y-4"
+          style={{ background: "rgba(251,191,36,0.07)", backdropFilter: "blur(16px)" }}
+        >
+          <div className="flex items-center gap-2">
+            <span className="text-lg">🔐</span>
+            <h2 className="text-sm font-bold uppercase tracking-widest text-amber-300">Premium Content</h2>
+            <span className="ml-auto text-xs text-amber-500/70">x402 gating</span>
+          </div>
+          <p className="text-xs text-amber-300/60">
+            Set a tip threshold and a content URL. Supporters who tip that amount unlock the link automatically.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider">
+                Content URL
+              </label>
+              <input
+                type="url"
+                value={premium.premium_content_uri}
+                onChange={(e) => setPremium((p) => ({ ...p, premium_content_uri: e.target.value }))}
+                placeholder="https://notion.so/your-exclusive-post"
+                className="w-full rounded-xl border border-zinc-700 bg-zinc-900/70 px-3 py-2.5 text-sm text-white placeholder-zinc-600 outline-none focus:border-amber-500/60 transition"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider">
+                Min Tip to Unlock ($)
+              </label>
+              <input
+                type="number"
+                min={1}
+                step={1}
+                value={premium.premium_threshold}
+                onChange={(e) => setPremium((p) => ({ ...p, premium_threshold: Number(e.target.value) }))}
+                className="w-full rounded-xl border border-zinc-700 bg-zinc-900/70 px-3 py-2.5 text-sm text-white outline-none focus:border-amber-500/60 transition"
+              />
+            </div>
+          </div>
+          <button
+            type="submit"
+            disabled={premiumLoading}
+            className="rounded-full bg-amber-500 px-5 py-2 text-sm font-bold text-black transition hover:bg-amber-400 disabled:opacity-50"
+          >
+            {premiumLoading ? "Saving..." : "Save Premium Settings"}
+          </button>
+        </form>
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           {/* Recent Tips */}
