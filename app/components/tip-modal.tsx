@@ -5,11 +5,11 @@ import { useState } from "react";
 interface TipModalProps {
   creatorHandle: string;
   onClose: () => void;
-  onSendTip: (amountUsdc: number) => Promise<void>;
+  onSendTip: (amountSol: number) => Promise<void>;
   isSending: boolean;
 }
 
-const PRESET_AMOUNTS = [1, 5, 20];
+const PRESET_AMOUNTS = [0.05, 0.1, 0.5];
 
 export function TipModal({
   creatorHandle,
@@ -17,10 +17,10 @@ export function TipModal({
   onSendTip,
   isSending,
 }: TipModalProps) {
-  const [selectedAmount, setSelectedAmount] = useState<number | "custom">(5);
-  const [customAmount, setCustomAmount] = useState("10");
+  const [selectedAmount, setSelectedAmount] = useState<number | "custom">(0.1);
+  const [customAmount, setCustomAmount] = useState("0.2");
 
-  const amountUsdc =
+  const amountSol =
     selectedAmount === "custom" ? Number(customAmount) : selectedAmount;
 
   return (
@@ -55,7 +55,7 @@ export function TipModal({
                   : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
               }`}
             >
-              ${amount}
+              ◎ {amount}
             </button>
           ))}
           <button
@@ -79,7 +79,7 @@ export function TipModal({
               step="0.01"
               value={customAmount}
               onChange={(event) => setCustomAmount(event.target.value)}
-              placeholder="Enter amount in USDC"
+              placeholder="Enter amount in SOL"
               className="w-full rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-3 text-sm text-white placeholder-zinc-500 outline-none focus:border-purple-500"
             />
           </div>
@@ -87,8 +87,8 @@ export function TipModal({
 
         <button
           type="button"
-          onClick={() => onSendTip(amountUsdc)}
-          disabled={isSending || !Number.isFinite(amountUsdc) || amountUsdc <= 0}
+          onClick={() => onSendTip(amountSol)}
+          disabled={isSending || !Number.isFinite(amountSol) || amountSol <= 0}
           className="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-purple-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-purple-500 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isSending && (
@@ -98,7 +98,7 @@ export function TipModal({
         </button>
 
         <p className="mt-3 text-center text-xs text-zinc-500">
-          Paid in USDC on Solana devnet
+          Paid in native SOL on Solana
         </p>
       </div>
     </div>

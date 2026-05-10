@@ -2,13 +2,13 @@
 
 import { Nav } from "../../components/nav";
 import { TipModal } from "../../components/tip-modal";
-import { useWalletConnection, useSplToken } from "@solana/react-hooks";
-import { address } from "@solana/kit";
+import { useWalletConnection, useSendTransaction } from "@solana/react-hooks";
+import { address, getProgramDerivedAddress, getUtf8Encoder, getAddressEncoder, getU64Encoder, AccountRole } from "@solana/kit";
 import { use, useEffect, useState, useCallback } from "react";
 import { toast } from "sonner";
 import { supabase } from "../../lib/supabase";
 
-const USDC_DEVNET_MINT = "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU";
+// USDC_DEVNET_MINT is no longer needed for native SOL tipping
 
 type LeaderEntry = { wallet: string; total: number; xHandle: string | null };
 type PremiumStatus = "idle" | "checking" | "locked" | "unlocked";
@@ -28,7 +28,7 @@ export default function CreatorPage({
 }) {
   const { handle } = use(params);
   const { connected, wallet } = useWalletConnection();
-  const { send, isSending } = useSplToken(USDC_DEVNET_MINT);
+  const { send, isSending } = useSendTransaction();
   const [showTipModal, setShowTipModal] = useState(false);
   const [creatorWallet, setCreatorWallet] = useState<string | null>(null);
   const [creatorFound, setCreatorFound] = useState<boolean | null>(null);
@@ -95,12 +95,49 @@ export default function CreatorPage({
     loadLeaderboard();
   }, [handle, loadLeaderboard]);
 
-  async function handleSendTip(amountUsdc: number) {
+  async function handleSendTip(amountSol: number) {
     if (!creatorWallet || !wallet) return;
     try {
+      const PROGRAM_ID = address("HGT4DoDJ1crx3HM28t1CJBT2KAAzK44y3esrNWCtP1JE");
+      const SYSTEM_PROGRAM_ID = address("11111111111111111111111111111111");
+      const tipperWallet = wallet.account.address;
+
+      const [creatorProfile] = await getProgramDerivedAddress({
+        programAddress: PROGRAM_ID,
+        seeds: [getUtf8Encoder().encode("creator"), getAddressEncoder().encode(address(creatorWallet))]
+      });
+
+      const [supporterStats] = await getProgramDerivedAddress({
+        programAddress: PROGRAM_ID,
+        seeds: [getUtf8Encoder().encode("supporter_sol"), getAddressEncoder().encode(creatorProfile), getAddressEncoder().encode(tipperWallet)]
+      });
+
+      const [creatorSolTotals] = await getProgramDerivedAddress({
+        programAddress: PROGRAM_ID,
+        seeds: [getUtf8Encoder().encode("creator_sol"), getAddressEncoder().encode(creatorProfile)]
+      });
+
+      const amountLamports = BigInt(Math.round(amountSol * 1_000_000_000));
+      const data = new Uint8Array([
+        0xc5, 0xec, 0x12, 0x29, 0x32, 0xed, 0xdc, 0x2d, // global:handle_send_tip_sol discriminator
+        ...getU64Encoder().encode(amountLamports)
+      ]);
+
+      const ix = {
+        programAddress: PROGRAM_ID,
+        data,
+        accounts: [
+          { address: creatorProfile, role: AccountRole.WRITABLE },
+          { address: address(creatorWallet), role: AccountRole.WRITABLE },
+          { address: supporterStats, role: AccountRole.WRITABLE },
+          { address: creatorSolTotals, role: AccountRole.WRITABLE },
+          { address: tipperWallet, role: AccountRole.WRITABLE_SIGNER },
+          { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
+        ]
+      };
+
       const sig = await send({
-        amount: amountUsdc,
-        destinationOwner: address(creatorWallet),
+        instructions: [ix]
       });
 
       const senderAddress = walletAddress;
@@ -108,7 +145,7 @@ export default function CreatorPage({
         const { error: dbErr } = await supabase.from("tips_cache").insert({
           creator_handle: handle,
           tipper_wallet: senderAddress,
-          amount_usdc: amountUsdc,
+          amount_usdc: amountSol, // Keep the column name amount_usdc in DB for now, but store SOL
           tx_signature: String(sig),
         });
         if (dbErr) console.error("tips_cache insert failed:", dbErr);
@@ -126,14 +163,14 @@ export default function CreatorPage({
           .then((r) => r.json())
           .then((b: { level?: number; total_tipped?: number }) => {
             if (b.level) {
-              const { emoji, label } = badgeInfo(b.total_tipped ?? amountUsdc);
+              const { emoji, label } = badgeInfo(b.total_tipped ?? amountSol);
               toast.success(`${emoji} ${label} badge — Level ${b.level} Supporter!`, { duration: 5000 });
             }
           })
           .catch(() => {/* badge is best-effort */});
       }
 
-      toast.success(`$${amountUsdc} USDC sent to @${handle}!`);
+      toast.success(`${amountSol} SOL sent to @${handle}!`);
       setShowTipModal(false);
       setPremiumStatus("idle"); // re-check after tip
       await loadLeaderboard();
@@ -238,8 +275,8 @@ export default function CreatorPage({
           </div>
           <div className="ml-auto flex gap-4 sm:gap-6 text-center">
             <div>
-              <p className="text-lg font-black text-green-400">${totalReceived.toFixed(2)}</p>
-              <p className="text-xs text-zinc-500">earned</p>
+              <p className="text-lg font-black text-green-400">◎ {totalReceived.toFixed(2)}</p>
+              <p className="text-xs text-zinc-500">SOL earned</p>
             </div>
             <div>
               <p className="text-lg font-black">{tipCount}</p>
@@ -279,7 +316,7 @@ export default function CreatorPage({
               <span className="text-lg">🔐</span>
               <h2 className="font-semibold text-amber-200">Premium Content</h2>
               <span className="ml-auto text-xs text-amber-400 border border-amber-500/30 rounded-full px-2.5 py-0.5 shrink-0">
-                Tip ${premiumThreshold}+ to unlock
+                Tip ◎ {premiumThreshold}+ to unlock
               </span>
             </div>
 
@@ -303,7 +340,7 @@ export default function CreatorPage({
               <div className="space-y-3">
                 <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
                   You need{" "}
-                  <span className="font-bold text-amber-200">${remainingUsd.toFixed(2)} more</span>{" "}
+                  <span className="font-bold text-amber-200">◎ {remainingUsd.toFixed(2)} more</span>{" "}
                   in tips to unlock this content.
                 </div>
                 <button
@@ -376,7 +413,7 @@ export default function CreatorPage({
                       {badge.emoji}
                     </span>
                     <span className="shrink-0 font-semibold text-green-400">
-                      ${entry.total.toFixed(2)}
+                      ◎ {entry.total.toFixed(2)}
                     </span>
                   </div>
                 );
