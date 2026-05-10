@@ -109,17 +109,24 @@ export default function CreatorPage({
 
       const [supporterStats] = await getProgramDerivedAddress({
         programAddress: PROGRAM_ID,
-        seeds: [getUtf8Encoder().encode("supporter_sol"), getAddressEncoder().encode(creatorProfile), getAddressEncoder().encode(tipperWallet)]
+        seeds: [
+          getUtf8Encoder().encode("supporter_sol"),
+          getAddressEncoder().encode(creatorProfile),
+          getAddressEncoder().encode(tipperWallet)
+        ]
       });
 
       const [creatorSolTotals] = await getProgramDerivedAddress({
         programAddress: PROGRAM_ID,
-        seeds: [getUtf8Encoder().encode("creator_sol"), getAddressEncoder().encode(creatorProfile)]
+        seeds: [
+          getUtf8Encoder().encode("creator_sol"),
+          getAddressEncoder().encode(creatorProfile)
+        ]
       });
 
       const amountLamports = BigInt(Math.round(amountSol * 1_000_000_000));
       const data = new Uint8Array([
-        0xc5, 0xec, 0x12, 0x29, 0x32, 0xed, 0xdc, 0x2d, // global:handle_send_tip_sol discriminator
+        0x98, 0xe8, 0x1c, 0x06, 0xe1, 0xff, 0x9b, 0x28, // global:send_tip_sol discriminator
         ...getU64Encoder().encode(amountLamports)
       ]);
 
