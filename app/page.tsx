@@ -17,9 +17,10 @@ export default function Home() {
           <h1 className="text-3xl sm:text-5xl font-black tracking-tight md:text-6xl flex flex-wrap items-center justify-center gap-x-3 gap-y-2">
             <span>Tip creators on</span>
             <img
-              src="https://upload.wikimedia.org/wikipedia/commons/5/57/X_logo_2023_%28white%29.png"
+              src="/x-logo.jpg"
               alt="X"
-              className="inline-block h-10 sm:h-14 md:h-16 w-auto"
+              className="inline-block h-9 sm:h-12 md:h-14 w-auto"
+              style={{ mixBlendMode: "multiply" }}
             />
             <span>with</span>
             <span className="text-green-400">USDC</span>

@@ -9,7 +9,7 @@ export function Nav() {
     <header className="border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-sm sticky top-0 z-50">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
         <Link href="/" className="flex items-center gap-2">
-          <Image src="/logo.png" alt="SolTip" width={32} height={32} className="rounded-md" />
+          <Image src="/logo-icon.png" alt="SolTip" width={36} height={36} className="rounded-lg object-contain" />
           <span className="text-sm font-bold tracking-tight text-white">Sol<span className="text-purple-400">Tip</span></span>
         </Link>
         <nav className="flex items-center gap-6">
