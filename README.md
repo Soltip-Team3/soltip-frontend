@@ -137,7 +137,8 @@ bun dev
 
 Deployed: [soltip-web.vercel.app](https://soltip-web.vercel.app)
 
-Demo video: _[coming soon]_
+Demo video: _[Youtube](https://youtu.be/Oni80dfto7U) _
+             [Youtube] (https://youtu.be/S59bYiXZ3ck)
 
 ---
 
